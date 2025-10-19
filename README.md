@@ -1,6 +1,6 @@
 # ChainMail
 
-A decentralized, blockchain-based email system with end-to-end encryption using PGP and immutable storage on IPFS. Built on BlockDAG/Kaspa with smart contracts for permanent email record-keeping.
+A decentralized, blockchain-based email system with end-to-end encryption using PGP and immutable storage on IPFS. Built on BlockDAG with smart contracts for permanent email record-keeping.
 
 ## Features
 
