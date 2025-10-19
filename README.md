@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChainMail
+
+A decentralized, blockchain-based email system with end-to-end encryption using PGP and immutable storage on IPFS. Built on BlockDAG/Kaspa with smart contracts for permanent email record-keeping.
+
+## Features
+
+- **End-to-End Encryption**: All emails encrypted with OpenPGP before transmission
+- **Blockchain Storage**: Email metadata stored immutably on-chain via smart contracts
+- **IPFS Integration**: Encrypted email content stored on IPFS (decentralized storage)
+- **Wallet Authentication**: MetaMask-based authentication and signing
+- **Relay Service**: Gasless transactions via meta-transactions for better UX
+- **Public Key Registry**: On-chain PGP public key registration for seamless encryption
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Blockchain**: Ethers.js v6, Solidity smart contracts
+- **Encryption**: OpenPGP.js for PGP encryption
+- **Storage**: IPFS (via HTTP API)
+- **UI Components**: Radix UI, Lucide Icons
+
+## Prerequisites
+
+- Node.js 18+ and npm/yarn/pnpm
+- MetaMask or compatible Web3 wallet
+- Access to a blockchain network (testnet/mainnet)
+- IPFS node or gateway access
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/ezac101/chainmail.git
+cd chainmail
+npm install
+```
+
+### 2. Environment Setup
+
+Create a `.env.local` file in the root directory:
+
+```bash
+# Blockchain Configuration
+NEXT_PUBLIC_CHAINMAIL_CONTRACT_ADDRESS=0x...
+NEXT_PUBLIC_RELAY_URL=http://localhost:3001
+
+# IPFS Configuration (if using custom node)
+NEXT_PUBLIC_IPFS_API_URL=http://localhost:5001
+NEXT_PUBLIC_IPFS_GATEWAY_URL=http://localhost:8080
+
+# Network Configuration
+NEXT_PUBLIC_NETWORK_CHAIN_ID=1337
+```
+
+### 3. Deploy Smart Contract (if needed)
+
+Deploy the `ChainMail.sol` contract to your blockchain network and update the contract address in `.env.local`.
+
+### 4. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Connect Wallet
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Click "Connect Wallet" and approve MetaMask connection
+- Register your PGP public key (auto-generated on first use)
+- Start sending encrypted emails!
 
-## Learn More
+## Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev      # Start development server with Turbopack
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run ESLint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/              # Next.js app router pages
+├── components/       # React components
+├── lib/              # Utility functions
+├── services/         # Business logic services
+│   ├── blockchain.service.ts   # Smart contract interactions
+│   ├── email.service.ts        # Email handling
+│   ├── encryption.service.ts   # PGP encryption
+│   ├── ipfs.service.ts         # IPFS storage
+│   ├── relay.service.ts        # Meta-transaction relay
+│   └── wallet.service.ts       # Wallet management
+contracts/
+└── ChainMail.sol     # Solidity smart contract
+```
 
-## Deploy on Vercel
+## How It Works
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **User Authentication**: Users connect via MetaMask, generating a PGP keypair stored locally
+2. **Key Registration**: Public keys registered on-chain for recipient lookup
+3. **Email Composition**: Emails encrypted with recipient's public key using OpenPGP
+4. **IPFS Storage**: Encrypted email content uploaded to IPFS, returning a CID
+5. **Blockchain Recording**: Email metadata (sender, recipient, IPFS CID) logged on-chain
+6. **Email Retrieval**: Recipients fetch email IDs from contract, decrypt content from IPFS
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Security Notes
+
+- Private keys never leave the user's browser
+- All emails encrypted client-side before IPFS upload
+- Smart contracts enforce immutability (emails cannot be deleted)
+- Relay service only facilitates transactions, cannot read email content
+
+## License
+
+MIT
