@@ -50,6 +50,7 @@ export default function InboxScreen() {
   const [exportedKeys, setExportedKeys] = useState('');
   const [importKeys, setImportKeys] = useState('');
   const [keysCopied, setKeysCopied] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Loading state for reload
   const [isReloading, setIsReloading] = useState(false);
@@ -432,6 +433,23 @@ export default function InboxScreen() {
     } catch (error) {
       console.error('❌ [Import] Failed to import keys:', error);
       alert('Failed to import keys. Please check the format.');
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingFile(true);
+    try {
+      const text = await file.text();
+      setImportKeys(text);
+      console.log('✅ [Import] File uploaded successfully');
+    } catch (error) {
+      console.error('❌ [Import] Failed to read file:', error);
+      alert('Failed to read file');
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -1016,6 +1034,35 @@ export default function InboxScreen() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">Import Keys (Restore)</h3>
+                </div>
+                
+                {/* File Upload Option */}
+                <div className="space-y-2">
+                  <Label htmlFor="keyFile" className="text-xs text-muted-foreground">
+                    Upload JSON file
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="keyFile"
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={handleFileUpload}
+                      disabled={uploadingFile}
+                      className="rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Select the JSON file you previously downloaded
+                  </p>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or paste directly</span>
+                  </div>
                 </div>
                 
                 <Textarea

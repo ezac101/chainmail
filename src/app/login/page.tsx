@@ -27,7 +27,8 @@ export default function LoginScreen() {
   const [activeTab, setActiveTab] = useState('login');
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [privateKeyInput, setPrivateKeyInput] = useState('');
-  const [showPrivateKeyRestore, setShowPrivateKeyRestore] = useState(false);
+  const [uploadingPrivateKey, setUploadingPrivateKey] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'mnemonic' | 'private-key' | 'both'>('mnemonic');
   const [generatedWallet, setGeneratedWallet] = useState<GeneratedWallet | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
@@ -194,6 +195,42 @@ export default function LoginScreen() {
     }
   };
 
+  const handlePrivateKeyFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingPrivateKey(true);
+    setError('');
+    
+    try {
+      const text = await file.text();
+      const trimmedText = text.trim();
+      
+      // Check if it's a plain private key or JSON format
+      if (trimmedText.startsWith('{')) {
+        // JSON format - try to extract private key
+        const parsed = JSON.parse(trimmedText);
+        if (parsed.privateKey) {
+          setPrivateKeyInput(parsed.privateKey);
+          console.log('✅ [Login] Private key extracted from JSON file');
+        } else {
+          throw new Error('No privateKey field found in JSON');
+        }
+      } else if (trimmedText.startsWith('0x')) {
+        // Plain private key
+        setPrivateKeyInput(trimmedText);
+        console.log('✅ [Login] Private key loaded from text file');
+      } else {
+        throw new Error('Invalid file format. Expected private key starting with 0x or JSON with privateKey field');
+      }
+    } catch (error) {
+      console.error('❌ [Login] Failed to read private key file:', error);
+      setError(error instanceof Error ? error.message : 'Failed to read file');
+    } finally {
+      setUploadingPrivateKey(false);
+    }
+  };
+
   const continueWithGeneratedWallet = async () => {
     if (!generatedWallet) return;
     
@@ -284,71 +321,133 @@ export default function LoginScreen() {
               )}
 
               {/* Login Tab */}
-              <TabsContent value="login" className="space-y-3 mt-0">
-                <div className="space-y-1.5">
-                  <Label htmlFor="mnemonic" className="text-sm">Mnemonic Phrase</Label>
-                  <Textarea
-                    id="mnemonic"
-                    value={mnemonicInput}
-                    onChange={(e) => setMnemonicInput(e.target.value)}
-                    placeholder="Enter your 12 or 24 word phrase..."
-                    rows={3}
-                    className="resize-none font-mono text-xs"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter your 12 or 24 word recovery phrase to restore your wallet
-                  </p>
-                </div>
-
-                <Button
-                  onClick={loginWithMnemonic}
-                  disabled={loading || !mnemonicInput.trim()}
-                  className="w-full"
-                >
-                  <Key className="w-4 h-4 mr-2" />
-                  {loading ? 'Logging in...' : 'Login with Mnemonic'}
-                </Button>
-
-                {/* Private Key Restore Option */}
-                <div className="pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPrivateKeyRestore(!showPrivateKeyRestore)}
-                    className="w-full text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {showPrivateKeyRestore ? '← Back to Mnemonic' : 'Restore with Private Key instead'}
-                  </Button>
-                </div>
-
-                {showPrivateKeyRestore && (
-                  <div className="space-y-3 pt-2 border-t border-border">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="privateKey" className="text-sm">Private Key</Label>
-                      <Input
-                        id="privateKey"
-                        type="password"
-                        value={privateKeyInput}
-                        onChange={(e) => setPrivateKeyInput(e.target.value)}
-                        placeholder="0x..."
-                        className="font-mono text-xs"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Advanced: Restore wallet using your private key directly
-                      </p>
-                    </div>
-
-                    <Button
-                      onClick={loginWithPrivateKey}
-                      disabled={loading || !privateKeyInput.trim()}
-                      className="w-full"
-                      variant="outline"
+              <TabsContent value="login" className="space-y-4 mt-0">
+                {/* Login Method Selector */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Choose Login Method</Label>
+                  <div className="grid grid-cols-3 gap-2 p-1 bg-muted rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('mnemonic')}
+                      className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
+                        loginMethod === 'mnemonic'
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
                     >
-                      <Wallet className="w-4 h-4 mr-2" />
-                      {loading ? 'Restoring...' : 'Restore with Private Key'}
-                    </Button>
+                      Mnemonic
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('private-key')}
+                      className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
+                        loginMethod === 'private-key'
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Private Key
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('both')}
+                      className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
+                        loginMethod === 'both'
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Both
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mnemonic Input - Show for 'mnemonic' or 'both' */}
+                {(loginMethod === 'mnemonic' || loginMethod === 'both') && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mnemonic" className="text-sm">Mnemonic Phrase</Label>
+                    <Textarea
+                      id="mnemonic"
+                      value={mnemonicInput}
+                      onChange={(e) => setMnemonicInput(e.target.value)}
+                      placeholder="Enter your 12 or 24 word phrase..."
+                      rows={3}
+                      className="resize-none font-mono text-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter your 12 or 24 word recovery phrase
+                    </p>
                   </div>
                 )}
+
+                {/* Private Key Input - Show for 'private-key' or 'both' */}
+                {(loginMethod === 'private-key' || loginMethod === 'both') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="privateKeyFile" className="text-sm">Private Key File</Label>
+                    <Input
+                      id="privateKeyFile"
+                      type="file"
+                      accept=".txt,.json,text/plain,application/json"
+                      onChange={handlePrivateKeyFileUpload}
+                      disabled={uploadingPrivateKey || loading}
+                      className="rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {loginMethod === 'both' 
+                        ? 'Optional: Upload a file containing your private key (txt or JSON format)'
+                        : 'Upload a file containing your private key (txt or JSON format)'
+                      }
+                    </p>
+                    {privateKeyInput && (
+                      <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                        <Check className="w-3 h-3" />
+                        <span>Private key loaded</span>
+                      </div>
+                    )}
+                    {uploadingPrivateKey && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <span>Reading file...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Login Button */}
+                <Button
+                  onClick={() => {
+                    if (loginMethod === 'mnemonic' || (loginMethod === 'both' && mnemonicInput.trim())) {
+                      loginWithMnemonic();
+                    } else if (loginMethod === 'private-key' && privateKeyInput.trim()) {
+                      loginWithPrivateKey();
+                    }
+                  }}
+                  disabled={
+                    loading || 
+                    (loginMethod === 'mnemonic' && !mnemonicInput.trim()) ||
+                    (loginMethod === 'private-key' && !privateKeyInput.trim()) ||
+                    (loginMethod === 'both' && !mnemonicInput.trim())
+                  }
+                  className="w-full"
+                >
+                  {loginMethod === 'mnemonic' && <Key className="w-4 h-4 mr-2" />}
+                  {loginMethod === 'private-key' && <Wallet className="w-4 h-4 mr-2" />}
+                  {loginMethod === 'both' && <Key className="w-4 h-4 mr-2" />}
+                  {loading ? 'Logging in...' : `Login with ${loginMethod === 'both' ? 'Mnemonic' : loginMethod === 'private-key' ? 'Private Key' : 'Mnemonic'}`}
+                </Button>
+
+                {/* Info Alert */}
+                <Alert className="border-blue-200 bg-blue-50 rounded-xl">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800 text-xs">
+                    {loginMethod === 'both' 
+                      ? 'Use both methods for maximum security. Mnemonic is required, private key is optional for verification.'
+                      : loginMethod === 'private-key'
+                      ? 'Advanced option: Login directly with your wallet private key.'
+                      : 'Standard method: Login with your 12 or 24 word recovery phrase.'
+                    }
+                  </AlertDescription>
+                </Alert>
               </TabsContent>
 
               {/* Generate Wallet Tab */}
